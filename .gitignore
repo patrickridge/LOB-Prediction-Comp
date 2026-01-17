@@ -19,4 +19,4 @@ __pycache__/
 *.ckpt
 *.zip
 
-!competition_package/example_solution/baseline.onnx
+!competition_package/example_solution/baseline.onnx.DS_Store
