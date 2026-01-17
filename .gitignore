@@ -18,3 +18,5 @@ __pycache__/
 *.pt
 *.ckpt
 *.zip
+
+!competition_package/example_solution/baseline.onnx
