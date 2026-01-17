@@ -56,3 +56,14 @@ Implications:
 	•	Focus on better features
 	•	Tune hyperparameters
 	4.	Only retrain GRU if trees stop improving
+
+### Current focus (Jan 2026)
+
+- Build XGBoost baseline with engineered LOB features
+- Train using sample weights = |target|
+- Iterate on valid_small for fast feedback
+- Promote to full valid only after feature set stabilises
+
+Decision rule:
+- If XGBoost ≥ GRU baseline (0.2595), continue with trees
+- Only retrain GRU if tree-based models plateau
