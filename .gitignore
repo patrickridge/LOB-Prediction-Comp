@@ -1,0 +1,20 @@
+# Data
+competition_package/datasets/
+*.parquet
+
+# Virtual environments
+env/
+.venv/
+venv/
+competition_package/env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Models / artifacts (optional)
+*.onnx
+*.joblib
+*.pt
+*.ckpt
+*.zip
