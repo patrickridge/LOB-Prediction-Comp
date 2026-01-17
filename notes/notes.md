@@ -1,0 +1,58 @@
+## LOB Predictorium — Notes
+
+### Objective
+Optimise weighted Pearson correlation, not RMSE.
+Metric rewards direction and relative magnitude.
+
+Prefer:
+- smooth
+- conservative
+- directionally correct predictions
+
+### Data
+- 10,721 independent sequences
+- 1000 steps each
+- Warm-up: 0–98
+- Scored: 99–999
+
+### Features
+- 32 engineered LOB + trade features
+- Roughly standardised with clipping around ±5
+- Per-sequence normalisation likely beneficial
+
+### Targets
+- Heavy-tailed
+- Very few samples exceed |6|
+- Predictions clipped during scoring
+
+### Modelling implications
+- Use warm-up statistics
+- Short-context models
+- Avoid overconfident magnitude predictions
+
+### Bid–ask spread inspection
+
+Plotted p6 − p0 over a single sequence.
+
+Key observations:
+- Spread is small, noisy, and mean-reverting.
+- Short-lived spikes decay quickly; no long-term drift.
+- No visible change at the warm-up boundary (step 99).
+- Negative values possible due to feature anonymisation.
+
+Implications:
+- Market regime is stable and liquid.
+- Short-horizon microstructure signals dominate.
+- Warm-up normalisation per sequence is appropriate.
+- Conservative, short-context models are preferred.
+
+### Next Plan
+	1.	Train XGBoost / LightGBM
+	•	Weight samples by |target|
+	•	Use simple engineered LOB features
+	•	Train on valid_small first
+	2.	Evaluate on full validation set
+	3.	If tree model ≥ GRU baseline
+	•	Focus on better features
+	•	Tune hyperparameters
+	4.	Only retrain GRU if trees stop improving
