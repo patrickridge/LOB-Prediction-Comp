@@ -1,5 +1,7 @@
 ## LOB Predictorium — Notes
 
+source competition_package/env/bin/activate
+
 ### Objective
 Optimise weighted Pearson correlation, not RMSE.
 Metric rewards direction and relative magnitude.
@@ -67,3 +69,15 @@ Implications:
 Decision rule:
 - If XGBoost ≥ GRU baseline (0.2595), continue with trees
 - Only retrain GRU if tree-based models plateau
+
+## Experiment 2026-01-17 — XGBoost v0 (K=20, unweighted)
+
+**Change**
+- Trained two XGBoost regressors (t0, t1) on flattened last-20-step window.
+
+**Result (sanity check)**
+- R² on valid_small (unweighted): t0 -0.056, t1 -0.099 (not a meaningful metric for this comp)
+
+**Next**
+- Score with ScorerStepByStep (Weighted Pearson) via solution_xgb.py.
+- Retrain with sample weights: w = |target| (optionally clipped).
