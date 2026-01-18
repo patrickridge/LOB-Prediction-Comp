@@ -35,6 +35,42 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
     X = df[feat_cols].astype(np.float32).copy()
 
+    # --------------------
+    # LOB aggregate features (cheap, high signal)
+    # --------------------
+
+    # Total depth
+    bid_vol = df[[f"v{i}" for i in range(6)]].sum(axis=1)
+    ask_vol = df[[f"v{i}" for i in range(6, 12)]].sum(axis=1)
+
+    # Order book imbalance
+    X["imbalance"] = (bid_vol - ask_vol) / (bid_vol + ask_vol + 1e-6)
+
+    # Top-of-book spread proxy
+    X["spread"] = df["p6"] - df["p0"]
+
+    # --------------------
+    # Rolling features (per sequence)
+    # --------------------
+    win = 10
+
+    # IMPORTANT: imbalance/spread live in X, not df
+    gX = X.groupby(df["seq_ix"])
+
+    X["m10_imbalance"] = (
+        gX["imbalance"].rolling(win).mean()
+        .reset_index(level=0, drop=True)
+        .fillna(0)
+        .astype(np.float32)
+    )
+
+    X["m10_spread"] = (
+        gX["spread"].rolling(win).mean()
+        .reset_index(level=0, drop=True)
+        .fillna(0)
+        .astype(np.float32)
+    )
+
     # Generic transforms
     # 1) first differences (momentum-ish)
     for c in feat_cols[:32]:  # keep it light; increase later

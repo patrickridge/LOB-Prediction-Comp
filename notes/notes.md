@@ -27,6 +27,20 @@ Prefer:
 - Very few samples exceed |6|
 - Predictions clipped during scoring
 
+### Targets intuition
+
+- t0: short-horizon, directional price movement
+  - Easier
+  - Responds well to raw LOB imbalance
+
+- t1: longer-horizon / noisier movement
+  - Harder
+  - Benefits from aggregation and regime-style features
+
+Strategy:
+- Use simple models + engineered features
+- Focus improvements on t1 while preserving t0
+
 ### Modelling implications
 - Use warm-up statistics
 - Short-context models
@@ -81,3 +95,5 @@ Decision rule:
 **Next**
 - Score with ScorerStepByStep (Weighted Pearson) via solution_xgb.py.
 - Retrain with sample weights: w = |target| (optionally clipped).
+
+- Consider shifting focus to stateful GRU/LSTM + augmentation (per winner report): biggest gains came from variance-normalised augmentation + light noise, not heavy feature engineering.

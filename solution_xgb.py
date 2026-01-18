@@ -44,11 +44,16 @@ class PredictionModel:
         self.current_seq_ix = None
         self.prev_vals = {}  # for diffs
         self.roll_bufs = {c: deque(maxlen=self.win) for c in self.roll_cols}
+        # buffers for engineered rolling features
+        self.roll_bufs["imbalance"] = deque(maxlen=self.win)
+        self.roll_bufs["spread"] = deque(maxlen=self.win)
 
     def _reset_seq(self, seq_ix: int):
         self.current_seq_ix = seq_ix
         self.prev_vals = {}
         self.roll_bufs = {c: deque(maxlen=self.win) for c in self.roll_cols}
+        self.roll_bufs["imbalance"] = deque(maxlen=self.win)
+        self.roll_bufs["spread"] = deque(maxlen=self.win)
 
     def _state_to_base_features(self, data_point: DataPoint) -> dict:
         """
@@ -66,6 +71,18 @@ class PredictionModel:
 
         return {c: float(s[i]) for i, c in enumerate(self.feat_cols)}
 
+    # --- FIX 1: moved out of _state_to_base_features and made a real class staticmethod ---
+    @staticmethod
+    def _lob_derived(base: dict) -> tuple[float, float]:
+        # bid v0..v5, ask v6..v11
+        bid_vol = sum(base[f"v{i}"] for i in range(6))
+        ask_vol = sum(base[f"v{i}"] for i in range(6, 12))
+        imbalance = (bid_vol - ask_vol) / (bid_vol + ask_vol + 1e-6)
+
+        # spread proxy (assumes p0 best bid, p6 best ask as you used in training)
+        spread = base["p6"] - base["p0"]
+        return float(imbalance), float(spread)
+
     @staticmethod
     def _mean_std(buf: deque):
         if len(buf) == 0:
@@ -79,6 +96,14 @@ class PredictionModel:
             self._reset_seq(data_point.seq_ix)
 
         base = self._state_to_base_features(data_point)
+
+        imb, spr = self._lob_derived(base)
+        base["imbalance"] = imb
+        base["spread"] = spr
+
+        # keep engineered rolling buffers updated
+        self.roll_bufs["imbalance"].append(imb)
+        self.roll_bufs["spread"].append(spr)
 
         # update rolling buffers (must happen every step, not just when need_prediction)
         for c in self.roll_cols:
@@ -97,6 +122,10 @@ class PredictionModel:
         for c in self.feat_cols:
             row[c] = base[c]
 
+        # --- FIX 2: add engineered base features AFTER row exists ---
+        row["imbalance"] = base["imbalance"]
+        row["spread"] = base["spread"]
+
         # diffs for first N columns
         for c in self.diff_cols:
             prev = self.prev_vals.get(c, base[c])
@@ -107,6 +136,10 @@ class PredictionModel:
             m, s = self._mean_std(self.roll_bufs[c])
             row[f"m{self.win}_{c}"] = m
             row[f"s{self.win}_{c}"] = s
+
+        for c in ("imbalance", "spread"):
+            m, _ = self._mean_std(self.roll_bufs[c])
+            row[f"m{self.win}_{c}"] = m
 
         # update prev_vals after using them
         for c in self.diff_cols:
