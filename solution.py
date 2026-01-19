@@ -99,15 +99,11 @@ class ONNXBaselinePredictor:
         self.current_seq_ix = seq_ix
         self.history = []
 
-    def step(self, data_point: DataPoint, need_pred: bool) -> np.ndarray | None:
+    def step(self, data_point: DataPoint) -> np.ndarray:
         if self.current_seq_ix != data_point.seq_ix:
             self._reset_seq(data_point.seq_ix)
 
         self.history.append(data_point.state.astype(np.float32, copy=False))
-
-        # SPEED: if we don't need a prediction at this step, don't run ONNX
-        if not need_pred:
-            return None
 
         # Build last-100 window for inference
         win = self.history[-self.window:]
@@ -137,11 +133,9 @@ class PredictionModel:
     """
     Ensemble:
       pred = alpha * GRU + (1 - alpha) * baseline_onnx
-
-    Tuned best from your sweep: alpha=0.9  (i.e. 0.9*GRU + 0.1*ONNX)
     """
 
-    def __init__(self, alpha: float = 0.9):
+    def __init__(self, alpha: float = 0.7):
         base_dir = os.path.dirname(os.path.abspath(__file__))
 
         # paths inside submission zip
@@ -154,16 +148,13 @@ class PredictionModel:
         self.alpha = float(alpha)
 
     def predict(self, data_point: DataPoint):
-        # GRU MUST be stepped every tick to keep hidden state correct
+        # Always advance both models so their state stays correct
         p_gru = self.gru.step(data_point)
-
-        # ONNX baseline only run when needed (history still updated inside step)
-        p_base = self.base.step(data_point, need_pred=bool(data_point.need_prediction))
+        p_base = self.base.step(data_point)
 
         if not data_point.need_prediction:
             return None
 
-        # p_base is guaranteed not None here
         pred = self.alpha * p_gru + (1.0 - self.alpha) * p_base
         pred = np.clip(pred, -6.0, 6.0).astype(np.float32)
         return pred
@@ -171,7 +162,7 @@ class PredictionModel:
 
 if __name__ == "__main__":
     test_file = os.path.join(CURRENT_DIR, "competition_package", "datasets", "valid.parquet")
-    model = PredictionModel(alpha=0.9)
+    model = PredictionModel(alpha=0.7)
     scorer = ScorerStepByStep(test_file)
 
     print("Scoring ensemble on valid.parquet (Weighted Pearson)...")

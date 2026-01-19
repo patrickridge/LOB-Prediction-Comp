@@ -189,21 +189,25 @@ Decision:
 - Revert warm-up normalisation and Huber loss.
 - Keep baseline GRU as reference.
 
-## Experiment 2026-01-19 — GRU (2-layer, H=256, dropout=0.1)
+## Experiment 2026-01-19 — GRU (2-layer, hidden=256)
 
-**Train setup**
-- Dataset: train.parquet + valid_small.parquet
-- Model: GRU, hidden=256, layers=2, dropout=0.1
-- Device: MPS
-- Train time: ~208.8 minutes
-- Checkpoint: artifacts/gru_h256_L2_do0.1.pt
+Model:
+- GRU, 2 layers
+- Hidden size: 256
+- Dropout: 0.1
+- Streaming inference (stateful)
+- Weighted MSE loss
+- No warm-up normalisation
 
-**Result (valid.parquet, official metric)**
-- Mean Weighted Pearson: 0.260162
-- t0: 0.387126
-- t1: 0.133198
+Training:
+- Full sequences (T=1000)
+- Batch size: 8
+- Epochs: 3
+- Device: MPS (Apple GPU)
+- Total training time ~3.5 hours
 
-**Takeaway**
-- Best GRU so far.
-- Slight improvement vs earlier GRU baseline (~0.2547) and competitive with ONNX baseline (~0.2595).
-- Next focus: speed up training loop while preserving/raising score.
+Validation (local):
+- Mean Weighted Pearson: 0.2602
+- t0: 0.3871
+- t1: 0.1332
+
