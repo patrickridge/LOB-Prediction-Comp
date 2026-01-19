@@ -167,3 +167,43 @@ Mean Weighted Pearson: 0.1474
 **Next**
 - Improve training to close gap: match preprocessing, tune hidden size/lr/epochs, add input normalisation consistent in train + inference.
 - Focus on boosting t1 (still the weak target).
+
+## Experiment 2026-01-18 — GRU + warm-up norm + LayerNorm + weighted Huber
+
+Changes:
+- Per-sequence warm-up normalisation using steps 0–98
+- Input LayerNorm before GRU
+- Weighted Huber loss (δ = 1.0)
+
+Results (valid):
+- Mean Weighted Pearson: 0.2493
+- t0: 0.3742
+- t1: 0.1244
+
+Interpretation:
+- Performance slightly worse than baseline GRU (0.2547).
+- Indicates baseline GRU already handled scale and noise well.
+- Added normalisation + robust loss likely over-regularised the model.
+
+Decision:
+- Revert warm-up normalisation and Huber loss.
+- Keep baseline GRU as reference.
+
+## Experiment 2026-01-19 — GRU (2-layer, H=256, dropout=0.1)
+
+**Train setup**
+- Dataset: train.parquet + valid_small.parquet
+- Model: GRU, hidden=256, layers=2, dropout=0.1
+- Device: MPS
+- Train time: ~208.8 minutes
+- Checkpoint: artifacts/gru_h256_L2_do0.1.pt
+
+**Result (valid.parquet, official metric)**
+- Mean Weighted Pearson: 0.260162
+- t0: 0.387126
+- t1: 0.133198
+
+**Takeaway**
+- Best GRU so far.
+- Slight improvement vs earlier GRU baseline (~0.2547) and competitive with ONNX baseline (~0.2595).
+- Next focus: speed up training loop while preserving/raising score.
