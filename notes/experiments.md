@@ -211,3 +211,28 @@ Validation (local):
 - t0: 0.3871
 - t1: 0.1332
 
+## Experiment 2026-01-19 — GRU signal contribution via linear ensemble
+
+Goal:
+- Test whether the trained GRU adds complementary signal on top of the provided baseline.
+- Not intended as a competitive ensemble, only as a diagnostic.
+
+Models:
+- Baseline (provided ONNX model)
+- Custom GRU (hidden=256, 2 layers, dropout=0.1)
+- Linear blend: pred = α·GRU + (1−α)·Baseline
+
+Validation (valid.parquet, weighted Pearson):
+- α = 0.0 (baseline only): ~0.3171
+- α = 0.1: **~0.3183 (best)**
+- α = 0.2+: monotonically worse
+
+Observations:
+- Best performance occurs with α ≈ 0.1, i.e. ~90% baseline, ~10% GRU.
+- Indicates GRU contains some weak complementary signal, but is significantly noisier than the baseline.
+- Noticeable degradation for larger α confirms GRU is not yet competitive on its own.
+
+Conclusion:
+- GRU is learning *some* useful structure but underperforms the baseline.
+- Future work should focus on improving GRU quality before attempting serious ensembling.
+- This experiment validates direction, not final performance.
