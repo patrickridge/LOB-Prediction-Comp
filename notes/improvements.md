@@ -29,4 +29,3 @@ Use AdamW + LR schedule (cosine / OneCycle) instead of fixed LR.
 If you do only two things:
 	1.	correlation-based loss
 	2.	windowed training on prediction points
-    
