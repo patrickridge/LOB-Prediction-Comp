@@ -1,25 +1,40 @@
-import os
-import sys
-import numpy as np
+# solution.py (submission-safe: no utils import)
 
+import os
+from typing import Any, Optional, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
-import onnxruntime as ort
-
-# utils live in competition_package
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(CURRENT_DIR, "competition_package"))
-from utils import DataPoint, ScorerStepByStep
-
-# NOTE: submission env is CPU-only; local can use mps
-DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
 
 
-# -------------------------
-# GRU (PyTorch) model
-# -------------------------
+# ======================
+# CONFIG (easy to change)
+# ======================
+
+# Put your checkpoint in the zip alongside solution.py
+CKPT_NAME = "gru_best_h128_L6_do0.1.pt"
+
+# If ckpt is missing fields, fall back to these defaults
+DEFAULT_INPUT_DIM = 32
+DEFAULT_D_OUT = 2
+DEFAULT_HIDDEN = 128
+DEFAULT_NUM_LAYERS = 6
+DEFAULT_DROPOUT = 0.1
+
+# Output clipping (competition expectation)
+CLIP_MIN, CLIP_MAX = -6.0, 6.0
+
+# Submission env is CPU-only. Keep CPU here to be safe.
+DEVICE = "cpu"
+
+
+# ======================
+# Model definition
+# ======================
+
 class GRUModel(nn.Module):
-    def __init__(self, d_in=32, hidden=256, d_out=2, num_layers=2, dropout=0.1):
+    def __init__(self, d_in: int, hidden: int, d_out: int, num_layers: int, dropout: float):
         super().__init__()
         self.gru = nn.GRU(
             input_size=d_in,
@@ -30,154 +45,106 @@ class GRUModel(nn.Module):
         )
         self.head = nn.Linear(hidden, d_out)
 
-    def forward(self, x, h=None):
-        out, h = self.gru(x, h)      # out: [B, T, H]
-        y = self.head(out)           # y:  [B, T, 2]
+    def forward(self, x: torch.Tensor, h: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
+        # x: [B, T, d_in]
+        out, h = self.gru(x, h)     # out: [B, T, hidden]
+        y = self.head(out)          # y: [B, T, d_out]
         return y, h
 
 
-class GRUPredictor:
-    def __init__(self, ckpt_path: str):
+# ======================
+# Submission entrypoint
+# ======================
+
+class PredictionModel:
+    """
+    Streaming GRU inference:
+    - maintains hidden state per sequence (seq_ix)
+    - updates each step
+    - returns prediction only when need_prediction=True, else None
+    """
+    def __init__(self):
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        ckpt_path = os.path.join(base_dir, CKPT_NAME)
+
+        if not os.path.exists(ckpt_path):
+            raise FileNotFoundError(
+                f"Checkpoint not found: {ckpt_path}\n"
+                f"Make sure {CKPT_NAME} is included in your submission zip next to solution.py."
+            )
+
         ckpt = torch.load(ckpt_path, map_location=DEVICE)
 
-        self.hidden = int(ckpt.get("hidden", 256))
-        self.num_layers = int(ckpt.get("num_layers", 2))
-        self.dropout = float(ckpt.get("dropout", 0.1))
+        d_in = int(ckpt.get("input_dim", DEFAULT_INPUT_DIM))
+        d_out = int(ckpt.get("d_out", DEFAULT_D_OUT))
+        hidden = int(ckpt.get("hidden", DEFAULT_HIDDEN))
+        num_layers = int(ckpt.get("num_layers", DEFAULT_NUM_LAYERS))
+        dropout = float(ckpt.get("dropout", DEFAULT_DROPOUT))
 
         self.model = GRUModel(
-            hidden=self.hidden,
-            num_layers=self.num_layers,
-            dropout=self.dropout,
+            d_in=d_in,
+            hidden=hidden,
+            d_out=d_out,
+            num_layers=num_layers,
+            dropout=dropout,
         ).to(DEVICE)
 
         self.model.load_state_dict(ckpt["state_dict"])
         self.model.eval()
 
-        self.current_seq_ix = None
-        self.h = None
+        self.current_seq_ix: Optional[int] = None
+        self.h: Optional[torch.Tensor] = None
 
     def _reset_seq(self, seq_ix: int):
         self.current_seq_ix = seq_ix
         self.h = None
 
     @torch.no_grad()
-    def step(self, data_point: DataPoint) -> np.ndarray:
-        if self.current_seq_ix != data_point.seq_ix:
-            self._reset_seq(data_point.seq_ix)
+    def predict(self, data_point: Any):
+        """
+        data_point is provided by the competition runtime.
+        It is expected to have:
+          - data_point.seq_ix (int)
+          - data_point.state (np array shape [32])
+          - data_point.need_prediction (bool)
+        """
+        seq_ix = int(data_point.seq_ix)
 
-        x_np = data_point.state.astype(np.float32, copy=False)
-        x = torch.from_numpy(x_np).to(DEVICE).view(1, 1, -1)  # [1,1,32]
+        if self.current_seq_ix != seq_ix:
+            self._reset_seq(seq_ix)
 
-        y, self.h = self.model(x, self.h)                     # y: [1,1,2]
-        pred = y[0, 0].detach().cpu().numpy().astype(np.float32)
-        return pred
+        x_np = np.asarray(data_point.state, dtype=np.float32)  # [32]
+        x = torch.from_numpy(x_np).to(DEVICE).view(1, 1, -1)   # [1,1,32]
 
+        y, self.h = self.model(x, self.h)                      # y: [1,1,2]
+        pred = y[0, 0].cpu().numpy().astype(np.float32)        # [2]
 
-# -------------------------
-# Baseline (ONNX) model
-# -------------------------
-class ONNXBaselinePredictor:
-    def __init__(self, onnx_path: str, window: int = 100):
-        self.window = window
-        self.current_seq_ix = None
-        self.history = []
-
-        sess_options = ort.SessionOptions()
-        sess_options.intra_op_num_threads = 1
-        sess_options.inter_op_num_threads = 1
-        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-
-        self.ort_session = ort.InferenceSession(
-            onnx_path,
-            sess_options,
-            providers=["CPUExecutionProvider"],
-        )
-        self.input_name = self.ort_session.get_inputs()[0].name
-        self.output_name = self.ort_session.get_outputs()[0].name
-
-    def _reset_seq(self, seq_ix: int):
-        self.current_seq_ix = seq_ix
-        self.history = []
-
-    def step(self, data_point: DataPoint, need_pred: bool) -> np.ndarray | None:
-        if self.current_seq_ix != data_point.seq_ix:
-            self._reset_seq(data_point.seq_ix)
-
-        self.history.append(data_point.state.astype(np.float32, copy=False))
-
-        # SPEED: if we don't need a prediction at this step, don't run ONNX
-        if not need_pred:
+        if not bool(data_point.need_prediction):
             return None
 
-        # Build last-100 window for inference
-        win = self.history[-self.window:]
-        if len(win) < self.window:
-            pad = [np.zeros_like(win[0])] * (self.window - len(win))
-            win = pad + win
-
-        data_arr = np.asarray(win, dtype=np.float32)          # [100, 32]
-        data_tensor = np.expand_dims(data_arr, axis=0)        # [1, 100, 32]
-
-        ort_inputs = {self.input_name: data_tensor}
-        output = self.ort_session.run([self.output_name], ort_inputs)[0]
-
-        # Output shape could be (1,2) or (1,seq,2)
-        if output.ndim == 3:
-            pred = output[0, -1, :]
-        else:
-            pred = output[0]
-
-        return pred.astype(np.float32)
+        return np.clip(pred, CLIP_MIN, CLIP_MAX).astype(np.float32)
 
 
-# -------------------------
-# Combined PredictionModel (submission entrypoint)
-# -------------------------
-class PredictionModel:
-    """
-    Ensemble:
-      pred = alpha * GRU + (1 - alpha) * baseline_onnx
-
-    Tuned best from your sweep: alpha=0.9  (i.e. 0.9*GRU + 0.1*ONNX)
-    """
-
-    def __init__(self, alpha: float = 0.9):
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-
-        # paths inside submission zip
-        ckpt_path = os.path.join(base_dir, "artifacts", "gru_h256_L2_do0.1.pt")
-        onnx_path = os.path.join(base_dir, "baseline.onnx")
-
-        self.gru = GRUPredictor(ckpt_path)
-        self.base = ONNXBaselinePredictor(onnx_path, window=100)
-
-        self.alpha = float(alpha)
-
-    def predict(self, data_point: DataPoint):
-        # GRU MUST be stepped every tick to keep hidden state correct
-        p_gru = self.gru.step(data_point)
-
-        # ONNX baseline only run when needed (history still updated inside step)
-        p_base = self.base.step(data_point, need_pred=bool(data_point.need_prediction))
-
-        if not data_point.need_prediction:
-            return None
-
-        # p_base is guaranteed not None here
-        pred = self.alpha * p_gru + (1.0 - self.alpha) * p_base
-        pred = np.clip(pred, -6.0, 6.0).astype(np.float32)
-        return pred
-
+# ======================
+# Optional local test (won't run in submission)
+# ======================
 
 if __name__ == "__main__":
-    test_file = os.path.join(CURRENT_DIR, "competition_package", "datasets", "valid.parquet")
-    model = PredictionModel(alpha=0.9)
+    # Only for your local sanity check if you have utils.py available locally.
+    # This block is NOT executed by the submission server.
+    try:
+        from utils import ScorerStepByStep  # type: ignore
+    except Exception as e:
+        print("Local test skipped (utils.py not found). Error:", e)
+        raise SystemExit(0)
+
+    # Adjust this path to your local valid parquet if needed
+    test_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "competition_package", "datasets", "valid.parquet")
+
+    model = PredictionModel()
     scorer = ScorerStepByStep(test_file)
 
-    print("Scoring ensemble on valid.parquet (Weighted Pearson)...")
+    print(f"DEVICE={DEVICE} | CKPT={CKPT_NAME}")
+    print("Scoring on valid.parquet...")
     results = scorer.score(model)
-
-    print("\nResults:")
-    print(f"Mean Weighted Pearson correlation: {results['weighted_pearson']:.6f}")
-    for t in scorer.targets:
-        print(f"  {t}: {results[t]:.6f}")
+    print("Results:", results)
