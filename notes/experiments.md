@@ -266,3 +266,29 @@ Conclusion:
 - Deeper GRU did not outperform the 2-layer hidden=256 baseline.
 - Validation loss plateaued early; deeper model likely needs tuning (LR, hidden size, or regularisation).
 
+## Experiment 2026-01-21 — GRU (2-layer, hidden=192, no dropout)
+
+Model:
+- GRU, 2 layers
+- Hidden size: 192
+- Dropout: 0.0
+- Streaming inference (stateful)
+- Weighted MSE loss
+
+Training:
+- Full sequences (T=1000)
+- Batch size: 32
+- Epochs: up to 20 (early stopping, patience=3)
+- Device: GPU (Tesla T4, Kaggle)
+- Training stopped at epoch 7
+- Total training time ~5.5 minutes
+
+Validation / Submission:
+- Best validation loss ≈ 13.62
+- Wunder submission score (weighted Pearson): **0.2581**
+- Performance indistinguishable from other GRU variants (h128×6, h256×2)
+
+Notes:
+- Different architectures converge to the same optimum
+- Early stopping selects very similar models across runs
+- Likely plateau for current feature set + loss
