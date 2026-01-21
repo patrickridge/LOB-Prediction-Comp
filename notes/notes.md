@@ -97,3 +97,6 @@ Decision rule:
 - Retrain with sample weights: w = |target| (optionally clipped).
 
 - Consider shifting focus to stateful GRU/LSTM + augmentation (per winner report): biggest gains came from variance-normalised augmentation + light noise, not heavy feature engineering.
+
+## Submitting
+zip -r submission.zip competition_package/example_solution/solution.py artifacts/gru_best_h128_L6_do0.1.pt

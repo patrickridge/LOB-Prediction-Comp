@@ -236,3 +236,33 @@ Conclusion:
 - GRU is learning *some* useful structure but underperforms the baseline.
 - Future work should focus on improving GRU quality before attempting serious ensembling.
 - This experiment validates direction, not final performance.
+
+## Experiment 2026-01-21 — GRU (6-layer, hidden=128)
+
+### Model
+- GRU, 6 layers
+- Hidden size: 128
+- Dropout: 0.1
+- Streaming inference (stateful)
+- Loss: Weighted MSE (metric-shaped)
+- No warm-up normalisation
+
+### Training
+- Full sequences (seq2seq, T = 1000)
+- Batch size: 32
+- Epochs: up to 20 (early stopping, patience = 3)
+- Optimiser: Adam (lr = 1e-3)
+- Gradient clipping: 1.0
+- Device: NVIDIA Tesla T4 (Kaggle GPU)
+- Total training time: ~2 minutes
+
+### Validation (local, Kaggle)
+- Mean Weighted Pearson: 0.2443
+- t0: 0.3698
+- t1: 0.1189
+
+### Notes
+- Much faster training due to GPU + seq2seq setup.
+- Deeper GRU did not outperform the 2-layer hidden=256 baseline.
+- Validation loss plateaued early; deeper model likely needs tuning (LR, hidden size, or regularisation).
+

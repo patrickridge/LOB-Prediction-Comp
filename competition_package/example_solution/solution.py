@@ -13,14 +13,14 @@ import torch.nn as nn
 # ======================
 
 # Put your checkpoint in the zip alongside solution.py
-CKPT_NAME = "gru_best_h128_L6_do0.1.pt"
+CKPT_NAME = "gru_best_h192_L2_do0.pt"
 
 # If ckpt is missing fields, fall back to these defaults
 DEFAULT_INPUT_DIM = 32
 DEFAULT_D_OUT = 2
-DEFAULT_HIDDEN = 128
-DEFAULT_NUM_LAYERS = 6
-DEFAULT_DROPOUT = 0.1
+DEFAULT_HIDDEN = 192
+DEFAULT_NUM_LAYERS = 2
+DEFAULT_DROPOUT = 0
 
 # Output clipping (competition expectation)
 CLIP_MIN, CLIP_MAX = -6.0, 6.0
