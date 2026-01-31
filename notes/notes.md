@@ -100,3 +100,25 @@ Decision rule:
 
 ## Submitting
 zip -r submission.zip competition_package/example_solution/solution.py artifacts/gru_best_h128_L6_do0.1.pt
+
+## Experiment 2026-01-30 — GRU (4-layer, hidden=32) — Seq2Seq
+
+Model:
+- GRU, 4 layers
+- Hidden size: 32
+- Dropout: 0.1
+- Seq2Seq training (full sequence)
+- Streaming stateful inference
+
+Training:
+- Batch size: 32
+- Epochs: 20 (early stopping at 17)
+- Optimizer: Adam (lr=1e-3)
+- Device: Tesla T4 (Kaggle)
+
+Validation (local):
+- Weighted Pearson: ~0.283
+
+Leaderboard:
+- Weighted Pearson: **0.2699**
+
