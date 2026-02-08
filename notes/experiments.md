@@ -167,3 +167,25 @@ From Giovanni:
 - Would shallow attention on top of GRU help?
 
 Baseline is now strong; remaining gains likely marginal.
+
+## 2026-02-08 — GRU ensemble boost (metric-loss)
+
+**Model**
+- GRU seq2seq, streaming inference
+- H=128, L=4, dropout=0.03
+
+**Training**
+- Loss: metric-based (weighted Pearson correlation; optimise -corr)
+- LR=3e-4, WD=1e-5
+- No augmentation
+- Seeds trained: 42, 999
+
+**Submission**
+- Ensemble: mean of predictions from seed 42 + seed 999 checkpoints
+
+**Result**
+- Leaderboard: **0.2852** (improved from 0.2830 single model)
+
+**Takeaway**
+- Ensemble gives a clean uplift → worth adding 1–3 more diverse seeds/configs.
+

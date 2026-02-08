@@ -112,3 +112,7 @@ Training with MSE or weighted MSE leads to:
 - Explore regime-aware conditioning
 
 This model forms a strong, simple, and reliable baseline.
+
+- Switching to metric-based loss + ensembling seeds (42+999) improved LB to **0.2852**.
+- Next focus: add ensemble members that are meaningfully different (architecture or training) rather than tiny tweaks.
+
