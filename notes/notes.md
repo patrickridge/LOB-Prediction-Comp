@@ -1,146 +1,114 @@
-## LOB Predictorium — Notes
+# LOB Predictorium — GRU Baseline
 
-source competition_package/env/bin/activate
+## Objective
 
-### Objective
-Optimise weighted Pearson correlation, not RMSE.
-Metric rewards direction and relative magnitude.
+Optimise **Weighted Pearson correlation** for short-horizon price movement prediction on anonymised limit order book data.
 
-Prefer:
-- smooth
-- conservative
-- directionally correct predictions
+The metric rewards:
+- correct **direction**
+- correct **relative magnitude**
+- penalises overconfident scale errors
 
-### Data
+RMSE-style optimisation does **not** align well with leaderboard performance.
+
+---
+
+## Data
+
 - 10,721 independent sequences
-- 1000 steps each
-- Warm-up: 0–98
-- Scored: 99–999
+- 1000 timesteps per sequence
+- Warm-up: steps 0–98
+- Scored: steps 99–999
 
-### Features
+Each sequence is evaluated independently at inference time.
+
+---
+
+## Features
+
 - 32 engineered LOB + trade features
-- Roughly standardised with clipping around ±5
-- Per-sequence normalisation likely beneficial
+- Roughly standardised and clipped
+- Slight per-sequence scale drift
 
-### Targets
-- Heavy-tailed
-- Very few samples exceed |6|
-- Predictions clipped during scoring
+Per-sequence normalisation is beneficial.
 
-### Targets intuition
+---
 
-- t0: short-horizon, directional price movement
-  - Easier
-  - Responds well to raw LOB imbalance
+## Targets
 
-- t1: longer-horizon / noisier movement
-  - Harder
-  - Benefits from aggregation and regime-style features
+Two regression targets:
 
-Strategy:
-- Use simple models + engineered features
-- Focus improvements on t1 while preserving t0
+- **t0**: short-horizon price movement  
+  Easier, strong microstructure signal
 
-### Modelling implications
-- Use warm-up statistics
-- Short-context models
-- Avoid overconfident magnitude predictions
+- **t1**: longer-horizon movement  
+  Noisier, regime-dependent, main bottleneck
 
-### Bid–ask spread inspection
+Improving t1 without harming t0 is key.
 
-Plotted p6 − p0 over a single sequence.
+---
 
-Key observations:
-- Spread is small, noisy, and mean-reverting.
-- Short-lived spikes decay quickly; no long-term drift.
-- No visible change at the warm-up boundary (step 99).
-- Negative values possible due to feature anonymisation.
+## Model
 
-Implications:
-- Market regime is stable and liquid.
-- Short-horizon microstructure signals dominate.
-- Warm-up normalisation per sequence is appropriate.
-- Conservative, short-context models are preferred.
+**GRU (Seq2Seq, streaming inference)**
 
-### Next Plan
-	1.	Train XGBoost / LightGBM
-	•	Weight samples by |target|
-	•	Use simple engineered LOB features
-	•	Train on valid_small first
-	2.	Evaluate on full validation set
-	3.	If tree model ≥ GRU baseline
-	•	Focus on better features
-	•	Tune hyperparameters
-	4.	Only retrain GRU if trees stop improving
+- Hidden size: **128**
+- Layers: **4**
+- Dropout: **0.03**
+- Stateful inference per sequence
+- Full-sequence training (Seq2Seq)
 
-### Current focus (Jan 2026)
+This setup consistently outperforms windowed and shallow models.
 
-- Build XGBoost baseline with engineered LOB features
-- Train using sample weights = |target|
-- Iterate on valid_small for fast feedback
-- Promote to full valid only after feature set stabilises
+---
 
-Decision rule:
-- If XGBoost ≥ GRU baseline (0.2595), continue with trees
-- Only retrain GRU if tree-based models plateau
+## Loss Function (Key Insight)
 
-## Experiment 2026-01-17 — XGBoost v0 (K=20, unweighted)
+Training with MSE or weighted MSE leads to:
+- good validation loss
+- worse leaderboard correlation
 
-**Change**
-- Trained two XGBoost regressors (t0, t1) on flattened last-20-step window.
+**Solution:** train directly on the competition metric.
 
-**Result (sanity check)**
-- R² on valid_small (unweighted): t0 -0.056, t1 -0.099 (not a meaningful metric for this comp)
+- Loss = **negative Pearson correlation**
+- Computed only on `need_prediction == 1` timesteps
+- Strongly improves alignment between validation and leaderboard scores
 
-**Next**
-- Score with ScorerStepByStep (Weighted Pearson) via solution_xgb.py.
-- Retrain with sample weights: w = |target| (optionally clipped).
+---
 
-- Consider shifting focus to stateful GRU/LSTM + augmentation (per winner report): biggest gains came from variance-normalised augmentation + light noise, not heavy feature engineering.
+## Training Details
 
-## Submitting
-zip -r submission.zip competition_package/example_solution/solution.py artifacts/gru_best_h128_L6_do0.1.pt
-
-## Experiment 2026-01-30 — GRU (4-layer, hidden=32) — Seq2Seq
-
-Model:
-- GRU, 4 layers
-- Hidden size: 32
-- Dropout: 0.1
-- Seq2Seq training (full sequence)
-- Streaming stateful inference
-
-Training:
+- Optimiser: Adam
+- Learning rate: 3e-4 – 1e-3
 - Batch size: 32
-- Epochs: 20 (early stopping at 17)
-- Optimizer: Adam (lr=1e-3)
-- Device: Tesla T4 (Kaggle)
+- Early stopping on validation correlation
+- Gradient clipping for stability
 
-Validation (local):
-- Weighted Pearson: ~0.283
+---
 
-Leaderboard:
-- Weighted Pearson: **0.2699**
+## Results
 
+- Validation correlation ≈ **0.27**
+- Significantly above provided baseline
+- Validation and leaderboard scores closely aligned
 
-Keep the same model (h32/L4/do0.1) and try one of these high signal changes:
-	•	LR = 3e-4 (everything else same)
-	•	PATIENCE = 6 (since improvements are late, don’t cut it off early)
-	•	EPOCHS = 40 (with patience 6, it will stop itself)
+---
 
-1) Same model, slightly lower LR (often improves generalisation)
-	•	HIDDEN=32, NUM_LAYERS=4, DROPOUT=0.1
-	•	LR = 7e-4
-	•	EPOCHS = 60
-	•	PATIENCE = 12
+## Key Observations
 
-2) Same model, slightly less dropout (can help if underfitting)
-	•	HIDDEN=32, NUM_LAYERS=4
-	•	DROPOUT = 0.05
-	•	keep LR=1e-3, EPOCHS=40, PATIENCE=10
+- 4-layer GRUs outperform shallow models
+- Hidden size sweet spot: **64–128**
+- Small dropout (≈0.03–0.06) improves generalisation
+- Overfitting appears quickly when optimising correlation directly
+- Conservative predictions perform better than aggressive ones
 
-3) Small capacity bump without blowing up overfitting
-	•	HIDDEN = 48, NUM_LAYERS=4, DROPOUT=0.1
-	•	keep LR=1e-3, EPOCHS=40, PATIENCE=10
+---
 
-Rule of thumb from your runs: H=32 + L=4 is the sweet spot, so tune LR/dropout/epochs around it.
+## Next Steps
+
+- Light hyperparameter tuning around best config
+- Multi-seed ensembling (if allowed)
+- Further stabilise t1 predictions
+- Explore regime-aware conditioning
+
+This model forms a strong, simple, and reliable baseline.

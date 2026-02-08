@@ -1,39 +1,169 @@
-## Experiments
+---
 
-### Reference: Baseline GRU (provided ONNX)
-Mean Weighted Pearson: 0.2595
+# 📄 `experiments.md`
+
+```md
+# LOB Predictorium — Experiments
+
+This file tracks experiments chronologically with decisions and outcomes.
+
+---
+
+## Reference Baseline
+
+**Provided GRU (ONNX)**  
+Mean Weighted Pearson: **0.2595**
 - t0: 0.3884
 - t1: 0.1306
 
-Notes:
-- t1 is consistently weaker than t0.
-- Any preprocessing/post-processing must match training, otherwise scores collapse.
+Observation:
+- t1 is consistently weaker
+- Any preprocessing mismatch destroys performance
 
-## GRU Experiments Summary (Seq2Seq, Streaming Inference)
+---
 
-### Best results
-- **HIDDEN=128, LAYERS=4, DROPOUT=0.03** → **0.2732** *(best so far)*
-- **HIDDEN=64,  LAYERS=4, DROPOUT=0.05** → **0.2728**
-- **HIDDEN=32,  LAYERS=4, DROPOUT=0.10** → **0.2699**
+## Experiment 2026-01-17 — XGBoost v0
 
-### Mid-tier results
-- **HIDDEN=32,  LAYERS=6, DROPOUT=0.10** → **0.2630**
-- **HIDDEN=128, LAYERS=2, DROPOUT=0.05** → **~0.2640**
-- **HIDDEN=192, LAYERS=2, DROPOUT=0.00** → **0.2581**
-- **HIDDEN=256, LAYERS=2, DROPOUT=0.05** → **0.2581**
+**Setup**
+- Two regressors (t0, t1)
+- Flattened last-20-step window
+- No weighting
 
-### Exploratory / weaker configurations
-- **HIDDEN=96,  LAYERS=3, DROPOUT=0.02** → **~0.278 (local)**, ~0.279 leaderboard test
-- **HIDDEN=96,  LAYERS=4, DROPOUT=0.01** → **0.2743**
-- **HIDDEN=128, LAYERS=6, DROPOUT=0.10** → **0.2581**
+**Result**
+- R² (unweighted, not meaningful): poor
+- Weighted Pearson via scorer: < GRU baseline
 
-### Observed patterns
-- 4-layer GRUs consistently outperform 2-layer models
-- Hidden size sweet spot appears to be **64–128**
-- Small dropout (**~0.03–0.06**) improves generalisation
-- Too many layers with small hidden (e.g. 32/6) degrades performance
-- Larger hidden sizes (192–256) need ≥4 layers to be effective (not yet tested)
+**Conclusion**
+- Trees underperform stateful GRU
+- Abandoned for now
 
-### Current best configuration
-- **GRU, HIDDEN=128, LAYERS=4, DROPOUT=0.03**
-- Weighted Pearson ≈ **0.273**
+---
+
+## Experiment 2026-01-30 — GRU Seq2Seq (32 / 4)
+
+**Model**
+- GRU
+- Hidden = 32
+- Layers = 4
+- Dropout = 0.10
+- Seq2Seq training
+- Streaming inference
+
+**Training**
+- Adam, lr = 1e-3
+- Early stopping at ~17 epochs
+
+**Results**
+- Local validation: ~0.283
+- Leaderboard: **0.2699**
+
+**Key Insight**
+- Seq2Seq training is critical
+- LB < val suggested loss mismatch
+
+---
+
+## Hyperparameter Sweep (Late Jan)
+
+### Best configurations
+
+| Hidden | Layers | Dropout | LB Score |
+|------|--------|---------|----------|
+| 128 | 4 | 0.03 | **0.2732** |
+| 64 | 4 | 0.05 | 0.2728 |
+| 32 | 4 | 0.10 | 0.2699 |
+
+### Patterns
+- 4 layers consistently beat 2
+- Hidden sweet spot: **64–128**
+- Small dropout (0.03–0.06) generalises best
+- Too many layers with small hidden hurts
+
+---
+
+## Augmentation Experiments (Early Feb)
+
+Tried:
+- Variance normalisation
+- Random scaling
+- Gaussian noise
+
+Result:
+- Augmentation **did not improve** performance
+- Often worsened validation correlation
+
+Conclusion:
+- Strong baseline already captures signal
+- Augmentation unnecessary for this setup
+
+---
+
+## Critical Insight — Loss Function (Feb 2026)
+
+From Giovanni:
+> “I recommend using the metric itself as your loss function.”
+
+### Change
+- Replaced weighted MSE with **negative Pearson correlation**
+- Implemented in PyTorch directly
+- Masked on `need_prediction == 1`
+
+### Effect
+- Validation metric aligns with leaderboard
+- Reduced gap between local and LB scores
+- Training becomes more stable
+
+---
+
+## Experiment — Metric-Based Loss (128 / 4)
+
+**Config**
+- Hidden = 128
+- Layers = 4
+- Dropout = 0.03
+- Loss = negative Pearson
+- No augmentation
+
+**Result**
+- Best validation corr ≈ **0.2708**
+- Much better calibration vs LB
+
+---
+
+## LR Tuning with Metric Loss
+
+**Config**
+- LR = 3e-4
+- WD = 1e-5
+
+**Result**
+- Best validation corr ≈ **0.2708**
+- More stable training
+- Less overfitting late
+
+**Decision**
+- Use this checkpoint for submission
+
+---
+
+## Current Best Model (Submission)
+
+- GRU (Seq2Seq, streaming)
+- Hidden = 128
+- Layers = 4
+- Dropout = 0.03
+- LR = 3e-4
+- Weight decay = 1e-5
+- **Loss = negative Pearson correlation**
+- Validation corr ≈ **0.271**
+- Leaderboard expected ≈ validation
+
+---
+
+## Open Questions
+
+- Can t1 be stabilised further?
+- Would ensembling seeds help?
+- Would shallow attention on top of GRU help?
+
+Baseline is now strong; remaining gains likely marginal.
