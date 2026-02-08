@@ -122,3 +122,25 @@ Validation (local):
 Leaderboard:
 - Weighted Pearson: **0.2699**
 
+
+Keep the same model (h32/L4/do0.1) and try one of these high signal changes:
+	•	LR = 3e-4 (everything else same)
+	•	PATIENCE = 6 (since improvements are late, don’t cut it off early)
+	•	EPOCHS = 40 (with patience 6, it will stop itself)
+
+1) Same model, slightly lower LR (often improves generalisation)
+	•	HIDDEN=32, NUM_LAYERS=4, DROPOUT=0.1
+	•	LR = 7e-4
+	•	EPOCHS = 60
+	•	PATIENCE = 12
+
+2) Same model, slightly less dropout (can help if underfitting)
+	•	HIDDEN=32, NUM_LAYERS=4
+	•	DROPOUT = 0.05
+	•	keep LR=1e-3, EPOCHS=40, PATIENCE=10
+
+3) Small capacity bump without blowing up overfitting
+	•	HIDDEN = 48, NUM_LAYERS=4, DROPOUT=0.1
+	•	keep LR=1e-3, EPOCHS=40, PATIENCE=10
+
+Rule of thumb from your runs: H=32 + L=4 is the sweet spot, so tune LR/dropout/epochs around it.

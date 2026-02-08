@@ -9,91 +9,31 @@ Notes:
 - t1 is consistently weaker than t0.
 - Any preprocessing/post-processing must match training, otherwise scores collapse.
 
----
+## GRU Experiments Summary (Seq2Seq, Streaming Inference)
 
-## Experiment Summary — Jan 2026 (GRU seq2seq)
+### Best results
+- **HIDDEN=128, LAYERS=4, DROPOUT=0.03** → **0.2732** *(best so far)*
+- **HIDDEN=64,  LAYERS=4, DROPOUT=0.05** → **0.2728**
+- **HIDDEN=32,  LAYERS=4, DROPOUT=0.10** → **0.2699**
 
-### Baseline
-- GRU baseline provided by competition
-- Score: ~0.265
+### Mid-tier results
+- **HIDDEN=32,  LAYERS=6, DROPOUT=0.10** → **0.2630**
+- **HIDDEN=128, LAYERS=2, DROPOUT=0.05** → **~0.2640**
+- **HIDDEN=192, LAYERS=2, DROPOUT=0.00** → **0.2581**
+- **HIDDEN=256, LAYERS=2, DROPOUT=0.05** → **0.2581**
 
----
+### Exploratory / weaker configurations
+- **HIDDEN=96,  LAYERS=3, DROPOUT=0.02** → **~0.278 (local)**, ~0.279 leaderboard test
+- **HIDDEN=96,  LAYERS=4, DROPOUT=0.01** → **0.2743**
+- **HIDDEN=128, LAYERS=6, DROPOUT=0.10** → **0.2581**
 
-### GRU (hidden=128, layers=6, dropout=0.1)
-- Training: seq2seq on full sequences
-- Batch size: 32
-- Early stopping (patience=3)
-- Result (leaderboard): **0.258**
-- Notes:
-  - Deeper model but likely over-regularised
-  - Did not outperform baseline
+### Observed patterns
+- 4-layer GRUs consistently outperform 2-layer models
+- Hidden size sweet spot appears to be **64–128**
+- Small dropout (**~0.03–0.06**) improves generalisation
+- Too many layers with small hidden (e.g. 32/6) degrades performance
+- Larger hidden sizes (192–256) need ≥4 layers to be effective (not yet tested)
 
----
-
-### GRU (hidden=256, layers=2, dropout=0.05)
-- Training: seq2seq
-- Batch size: 32
-- Early stopping
-- Result (leaderboard): **0.258**
-- Notes:
-  - Larger hidden size alone not sufficient
-  - Shallow depth likely limits representation
-
----
-
-### GRU (hidden=192, layers=2, dropout=0.0)
-- Training: seq2seq
-- Batch size: 32
-- Early stopping
-- Result (leaderboard): **0.258**
-- Notes:
-  - Removing dropout did not improve generalisation
-  - Similar performance across epochs
-
----
-
-### GRU (hidden=32, layers=4, dropout=0.1)
-- Training: seq2seq
-- Batch size: 32
-- Early stopping
-- Validation (local): weighted Pearson ≈ **0.283**
-- Result (leaderboard): **0.2699**
-- Notes:
-  - Strong improvement despite small hidden size
-  - Indicates depth > width for this problem
-
----
-
-### GRU (hidden=32, layers=6, dropout=0.1)
-- Training: seq2seq
-- Batch size: 32
-- Early stopping
-- Result (leaderboard): **0.263**
-- Notes:
-  - Extra depth without enough capacity hurt performance
-  - Likely underfitting
-
----
-
-### GRU (hidden=64, layers=4, dropout=0.05)
-- Training: seq2seq
-- Batch size: 32
-- Early stopping
-- Result (leaderboard): **0.2728**
-- Notes:
-  - Best result so far
-  - Balanced depth and width
-  - Confirms seq2seq + moderate depth is effective
-
----
-
-## Key Takeaways
-- Seq2seq training is critical for performance
-- Depth (4–6 layers) matters more than very large hidden size
-- Moderate hidden size (32–64) generalises better
-- Small dropout (0–0.05) works best
-- Increasing model size alone does not guarantee improvement
-
-## Current Best
-- **GRU(hidden=64, layers=4, dropout=0.05)**
-- **Leaderboard score: 0.2728**
+### Current best configuration
+- **GRU, HIDDEN=128, LAYERS=4, DROPOUT=0.03**
+- Weighted Pearson ≈ **0.273**

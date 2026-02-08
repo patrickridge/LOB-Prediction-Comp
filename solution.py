@@ -14,7 +14,7 @@ import torch.nn as nn
 # i.e. unzip -l submission.zip should show:
 #   solution.py
 #   gru_best_h32_L4_do0.1.pt
-CKPT_NAME = "gru_best_h128_L4_do0.03.pt"
+CKPT_NAME = "gru_best_h128_L4_do0.03_lr0.0003_wd1e-05_bs32_seed42_metricloss1_aug0.pt"
 
 # Output clipping (competition expectation)
 CLIP_MIN, CLIP_MAX = -6.0, 6.0
