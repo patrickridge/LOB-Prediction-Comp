@@ -118,7 +118,7 @@ This model forms a strong, simple, and reliable baseline.
 
 What to do next (simple order)
 	1.	Train with strong augmentation (0.6–1.4 scale, noise 0.05σ) on your best config.  ￼
-	2.	Keep the 3-seed ensemble, but make one model different (feature transform view).  ￼
+	2.	Keep the 3-seed ensemble, but make one model different (feature transform view) - Feature transform into RNN and BiLSTM￼
 	3.	Add online adaptive weighting at inference.  ￼
 	4.	Then try 2-stage training (reload best → short low-LR finetune) + optional SWA.  ￼
-	5.	Only then: Highway head / chrono init.  ￼
+	5.	Only then: Highway head / chrono init.
