@@ -116,3 +116,9 @@ This model forms a strong, simple, and reliable baseline.
 - Switching to metric-based loss + ensembling seeds (42+999) improved LB to **0.2852**.
 - Next focus: add ensemble members that are meaningfully different (architecture or training) rather than tiny tweaks.
 
+What to do next (simple order)
+	1.	Train with strong augmentation (0.6–1.4 scale, noise 0.05σ) on your best config.  ￼
+	2.	Keep the 3-seed ensemble, but make one model different (feature transform view).  ￼
+	3.	Add online adaptive weighting at inference.  ￼
+	4.	Then try 2-stage training (reload best → short low-LR finetune) + optional SWA.  ￼
+	5.	Only then: Highway head / chrono init.  ￼

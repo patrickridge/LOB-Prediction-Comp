@@ -116,7 +116,7 @@ class PredictionModel:
             y, self.hs[i] = model(x, self.hs[i])
             preds.append(y[0, 0].cpu().numpy().astype(np.float32))
 
-        pred = np.sum(np.stack(preds, axis=0) * weights[:, None], axis=0)
+        pred = np.mean(np.stack(preds, axis=0), axis=0)
         pred *= 0.95
         
         if not bool(data_point.need_prediction):
