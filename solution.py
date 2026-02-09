@@ -11,8 +11,9 @@ import torch.nn as nn
 # Put BOTH checkpoint files next to solution.py in the zip root
 CKPT_NAMES = [
     "gru_best_h128_L4_do0.03_lr0.0003_wd1e-05_bs32_seed42_metricloss1_aug0.pt",
-    "gru_best_h128_L4_do0.03_lr0.0003_wd1e-05_bs32_seed999_metricloss1_aug0.pt",
     "gru_best_h128_L4_do0.03_lr0.0003_wd1e-05_bs32_seed123_metricloss1_aug0.pt",
+    "gru_best_h128_L4_do0.03_lr0.0003_wd1e-05_bs32_seed999_metricloss1_aug0.pt",
+    "gru_best_h128_L4_do0.03_lr0.0003_wd1e-05_bs32_seed2024_metricloss1_aug0.pt",
 ]
 
 CLIP_MIN, CLIP_MAX = -6.0, 6.0
@@ -117,7 +118,6 @@ class PredictionModel:
             preds.append(y[0, 0].cpu().numpy().astype(np.float32))
 
         pred = np.mean(np.stack(preds, axis=0), axis=0)
-        pred *= 0.95
         
         if not bool(data_point.need_prediction):
             return None
