@@ -189,3 +189,42 @@ Baseline is now strong; remaining gains likely marginal.
 **Takeaway**
 - Ensemble gives a clean uplift → worth adding 1–3 more diverse seeds/configs.
 
+---
+
+## 2026-02/03 — 4-Seed GRU Ensemble (Best Result)
+
+**Model**
+- GRU seq2seq, streaming inference
+- H=128, L=4, dropout=0.03
+
+**Training**
+- Loss: negative Pearson correlation
+- LR=3e-4, WD=1e-5
+- Seeds: 42, 123, 999, 2024
+
+**Submission**
+- Mean of 4 checkpoint predictions
+
+**Result**
+- Leaderboard: **0.2883** ← current best
+
+**Takeaway**
+- Adding seeds 123 and 2024 to the prior 2-seed ensemble gave a further clean uplift.
+- More seeds with the same config continue to help; diversity not required for small gains.
+
+---
+
+## 2026-03 — Architecture Diversity Experiments (LSTM, BiLSTM, TCN-GRU)
+
+**New solution files** (in `solutions/`)
+- `solution_gru_lstm.py` — GRU + LSTM ensemble
+- `solution_gru_bilstm.py` — GRU + BiLSTM ensemble
+- `solution_bilstm_lstm.py` — BiLSTM + LSTM ensemble
+- `solution_6_gru_lstm_bilstm.py` — 6-model GRU + LSTM + BiLSTM ensemble
+- `solution_gru_tcn.py` — GRU + TCN ensemble
+- `solution_tcn_gru.py` — TCN-GRU standalone
+- `solution_adaptive.py` — GRU with adaptive inference weighting
+
+**Status**
+- Models trained; leaderboard scores TBD
+

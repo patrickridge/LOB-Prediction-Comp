@@ -2,11 +2,9 @@
 
 Short-horizon price movement prediction on anonymised limit order book data.
 
-**Competition:** [Wunder Predictorium](https://wundernn.io/predictorium)
-
 ## Competition
 
-**Task:** Predict two targets per timestep:
+[Wunder Predictorium](https://wundernn.io/predictorium) — **Task:** Predict two targets per timestep:
 - **t0** — short-horizon price movement (stronger signal)
 - **t1** — longer-horizon price movement (noisier, main bottleneck)
 
