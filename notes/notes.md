@@ -1,5 +1,7 @@
 # LOB Predictorium — GRU Baseline
 
+MLP?
+
 ## Objective
 
 Optimise **Weighted Pearson correlation** for short-horizon price movement prediction on anonymised limit order book data.
@@ -122,3 +124,4 @@ What to do next (simple order)
 	3.	Add online adaptive weighting at inference.  ￼
 	4.	Then try 2-stage training (reload best → short low-LR finetune) + optional SWA.  ￼
 	5.	Only then: Highway head / chrono init.
+
