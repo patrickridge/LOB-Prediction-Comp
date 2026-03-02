@@ -2,7 +2,7 @@
 
 Short-horizon price movement prediction on anonymised limit order book data.
 
-**Competition:** [Wunder Predictorium](https://wundernn.io/predictorium/docs/quick_start)
+**Competition:** [Wunder Predictorium](https://wundernn.io/predictorium)
 
 ## Competition
 
