@@ -1,6 +1,6 @@
 # LOB Predictorium — Wunder Challenge 2
 
-Deep learning solution to short-horizon price movement prediction on anonymised limit order book (LOB) data. Uses GRU-based recurrent neural networks trained with a metric-aligned loss function, ensembled across multiple seeds and architectures (LSTM, BiLSTM). Achieved a leaderboard score of **0.2883**.
+Deep learning solution to short-horizon price movement prediction on anonymised limit order book (LOB) data. Uses GRU-based recurrent neural networks trained with a metric-aligned loss function, ensembled across multiple seeds and architectures (LSTM, BiLSTM). Achieved a leaderboard score of **0.2883**, placing **110th out of 4,913** (top 3%).
 
 ## Competition
 
