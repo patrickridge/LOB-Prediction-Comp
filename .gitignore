@@ -1,5 +1,5 @@
 # Data
-competition_package/datasets/
+competition_package/
 *.parquet
 
 # Virtual environments

@@ -58,9 +58,6 @@ All submission-ready solutions are in the [`solutions/`](solutions/) directory.
 │   ├── KAGGLE.md          # Setup instructions
 │   └── kaggle_train.ipynb # Training notebook (GPU)
 ├── artifacts/             # Feature metadata (feature_names.json, feature_meta.json)
-├── competition_package/   # Provided competition utilities and baseline
-│   ├── utils.py           # weighted_pearson_correlation(), DataPoint, ScorerStepByStep
-│   └── example_solution/  # Baseline ONNX model and solution templates
 ├── data_inspection/       # EDA scripts and visualisations
 ├── models/                # Trained model weights (gitignored)
 └── eval_local.py          # Local evaluation script
