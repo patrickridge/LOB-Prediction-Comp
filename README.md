@@ -1,6 +1,6 @@
 # LOB Predictorium — Wunder Challenge 2
 
-Deep learning solution to short-horizon price movement prediction on anonymised limit order book (LOB) data. Uses GRU-based recurrent neural networks trained with a metric-aligned loss function, ensembled across multiple seeds and architectures (LSTM, BiLSTM). Achieved a leaderboard score of **0.2883**, placing **110th out of 4,913** (top 2.2%).
+Deep learning solution to short-horizon price movement prediction on anonymised limit order book (LOB) data. Uses GRU-based recurrent neural networks trained with a metric-aligned loss function, ensembled across multiple seeds and architectures (LSTM, BiLSTM). Achieved a leaderboard score of **0.2883** during the competition, and a final out-of-sample score of **0.3116** — placing **42nd globally** in the finals (top 1%) out of 4,919 participants.
 
 ## Competition
 
@@ -14,9 +14,14 @@ Deep learning solution to short-horizon price movement prediction on anonymised 
 
 **Reference baseline (provided ONNX):** 0.2595
 
-## Best Result
+## Results
 
-**0.2883** — 4-seed GRU ensemble (seeds 42, 123, 999, 2024)
+| Stage | Score | Placement |
+|-------|-------|-----------|
+| Competition leaderboard | 0.2883 | 110 / 4,919 |
+| **Finals (out-of-sample)** | **0.3116** | **42nd / 4,919 (top 1%)** |
+
+Best submission: 4-seed GRU ensemble (seeds 42, 123, 999, 2024)
 
 | Setting | Value |
 |---------|-------|
@@ -38,7 +43,7 @@ All submission-ready solutions are in the [`solutions/`](solutions/) directory.
 
 | File | Architecture | Notes |
 |------|-------------|-------|
-| `solution_gru.py` | 4× GRU | Best result (0.2883) |
+| `solution_gru.py` | 4× GRU | Best submission — 0.2883 LB / 0.3116 finals |
 | `solution_gru_lstm.py` | GRU + LSTM | Architecture diversity ensemble |
 | `solution_gru_bilstm.py` | GRU + BiLSTM | Architecture diversity ensemble |
 | `solution_bilstm_lstm.py` | BiLSTM + LSTM | No GRU variant |
