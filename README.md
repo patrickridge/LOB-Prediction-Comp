@@ -1,6 +1,6 @@
 # LOB Predictorium — Wunder Challenge 2
 
-Deep learning solution to short-horizon price movement prediction on anonymised limit order book (LOB) data. Uses GRU-based recurrent neural networks trained with a metric-aligned loss function, ensembled across multiple seeds and architectures (LSTM, BiLSTM). Achieved a leaderboard score of **0.2883** during the competition, and a final out-of-sample score of **0.3116** — placing **42nd globally** in the finals (top 1%) out of 4,919 participants.
+Sequence-based deep learning models using recurrent neural networks for high-frequency limit order book price forecasting, built for the [Wunder Predictorium](https://wundernn.io/predictorium) competition. Achieved a final out-of-sample score of **0.3116**, ranking **42nd globally (top 1%)** out of 4,919 participants.
 
 ## Competition
 
